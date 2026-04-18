@@ -17,67 +17,72 @@ const getCompatibleDonorGroups = (recipientBloodGroup) => {
 
 const searchMatchingDonors = (req, res) => {
   try {
-    const { blood_group } = req.query;
+    const { blood_group, city } = req.query;
 
     if (!blood_group) {
-      return res.status(400).json({
-        message: "blood_group is required",
-      });
+      return res.status(400).json({ message: "Blood group is required" });
     }
 
     const compatibleGroups = getCompatibleDonorGroups(blood_group);
 
     if (compatibleGroups.length === 0) {
-      return res.status(400).json({
-        message: "Invalid blood group",
-      });
+      return res.status(400).json({ message: "Invalid blood group" });
     }
 
-    const placeholders = compatibleGroups.map(() => "?").join(",");
-
-    const sql = `
-      SELECT
+    let sql = `
+      SELECT 
         dp.id,
         dp.user_id,
-        dp.blood_group,
-        dp.gender,
-        dp.city,
-        dp.availability_status,
-        dp.verified,
-        COALESCE(dp.eligible_status, 1) AS eligible_status,
         u.full_name,
         u.email,
-        u.phone
+        u.phone,
+        dp.blood_group,
+        dp.gender,
+        dp.date_of_birth,
+        dp.age,
+        dp.weight,
+        dp.address,
+        dp.city,
+        dp.health_status,
+        dp.last_donation_date,
+        dp.availability_status,
+        dp.verified,
+        dp.eligible_status
       FROM donor_profiles dp
       JOIN users u ON dp.user_id = u.id
-      WHERE dp.blood_group IN (${placeholders})
+      WHERE dp.blood_group IN (?)
         AND dp.availability_status = 'available'
-        AND COALESCE(dp.eligible_status, 1) = 1
-        AND u.role = 'donor'
-      ORDER BY
-        CASE WHEN dp.blood_group = ? THEN 0 ELSE 1 END,
-        dp.verified DESC,
-        dp.id DESC
+        AND dp.eligible_status = 1
+        AND (dp.health_status = 'Healthy' OR dp.health_status = 'healthy' OR dp.health_status IS NULL)
+        AND (dp.weight IS NULL OR dp.weight >= 50)
     `;
 
-    const values = [...compatibleGroups, blood_group];
+    const params = [compatibleGroups];
 
-    db.query(sql, values, (err, result) => {
+    if (city && city.trim() !== "") {
+      sql += ` AND dp.city = ?`;
+      params.push(city.trim());
+    }
+
+    sql += ` ORDER BY dp.verified DESC, dp.created_at DESC`;
+
+    db.query(sql, params, (err, results) => {
       if (err) {
+        console.error("MATCHING ERROR:", err);
         return res.status(500).json({
-          message: "Database error",
+          message: "Error searching matching donors",
           error: err.message,
         });
       }
 
       return res.status(200).json({
-        requestedBloodGroup: blood_group,
-        compatibleDonorGroups: compatibleGroups,
-        totalMatches: result.length,
-        donors: result,
+        message: "Matching donors fetched successfully",
+        count: results.length,
+        data: results,
       });
     });
   } catch (error) {
+    console.error("SERVER ERROR:", error);
     return res.status(500).json({
       message: "Server error",
       error: error.message,

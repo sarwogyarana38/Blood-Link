@@ -12,12 +12,13 @@ const addDonorProfile = (req, res) => {
       blood_group,
       gender,
       date_of_birth,
+      age,
       weight,
       address,
       city,
       health_status,
       last_donation_date,
-      availability_status
+      availability_status,
     } = body;
 
     if (!blood_group) {
@@ -31,20 +32,32 @@ const addDonorProfile = (req, res) => {
         console.error("CHECK ERROR:", err);
         return res.status(500).json({
           message: "Database error while checking donor profile",
-          error: err.message
+          error: err.message,
         });
       }
 
       if (result.length > 0) {
         return res.status(400).json({
-          message: "Donor profile already exists"
+          message: "Donor profile already exists",
         });
       }
 
       const insertSql = `
         INSERT INTO donor_profiles
-        (user_id, blood_group, gender, date_of_birth, weight, address, city, health_status, last_donation_date, availability_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (
+          user_id,
+          blood_group,
+          gender,
+          date_of_birth,
+          age,
+          weight,
+          address,
+          city,
+          health_status,
+          last_donation_date,
+          availability_status
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       db.query(
@@ -54,25 +67,26 @@ const addDonorProfile = (req, res) => {
           blood_group,
           gender || null,
           date_of_birth || null,
+          age || null,
           weight || null,
           address || null,
           city || null,
           health_status || null,
           last_donation_date || null,
-          availability_status || "available"
+          availability_status || "available",
         ],
         (err, result) => {
           if (err) {
             console.error("INSERT ERROR:", err);
             return res.status(500).json({
               message: "Insert error",
-              error: err.message
+              error: err.message,
             });
           }
 
           return res.status(201).json({
             message: "Donor profile created successfully",
-            profileId: result.insertId
+            profileId: result.insertId,
           });
         }
       );
@@ -81,7 +95,7 @@ const addDonorProfile = (req, res) => {
     console.error("SERVER ERROR:", error);
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -102,7 +116,7 @@ const getMyDonorProfile = (req, res) => {
         console.error("GET PROFILE ERROR:", err);
         return res.status(500).json({
           message: "Database error",
-          error: err.message
+          error: err.message,
         });
       }
 
@@ -111,14 +125,14 @@ const getMyDonorProfile = (req, res) => {
       }
 
       return res.status(200).json({
-        donorProfile: result[0]
+        data: result[0],
       });
     });
   } catch (error) {
     console.error("SERVER ERROR:", error);
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -132,12 +146,13 @@ const updateMyDonorProfile = (req, res) => {
       blood_group,
       gender,
       date_of_birth,
+      age,
       weight,
       address,
       city,
       health_status,
       last_donation_date,
-      availability_status
+      availability_status,
     } = body;
 
     const sql = `
@@ -145,6 +160,7 @@ const updateMyDonorProfile = (req, res) => {
       SET blood_group = ?,
           gender = ?,
           date_of_birth = ?,
+          age = ?,
           weight = ?,
           address = ?,
           city = ?,
@@ -160,20 +176,21 @@ const updateMyDonorProfile = (req, res) => {
         blood_group || null,
         gender || null,
         date_of_birth || null,
+        age || null,
         weight || null,
         address || null,
         city || null,
         health_status || null,
         last_donation_date || null,
         availability_status || "available",
-        userId
+        userId,
       ],
       (err, result) => {
         if (err) {
           console.error("UPDATE PROFILE ERROR:", err);
           return res.status(500).json({
             message: "Update error",
-            error: err.message
+            error: err.message,
           });
         }
 
@@ -182,7 +199,7 @@ const updateMyDonorProfile = (req, res) => {
         }
 
         return res.status(200).json({
-          message: "Donor profile updated successfully"
+          message: "Donor profile updated successfully",
         });
       }
     );
@@ -190,7 +207,7 @@ const updateMyDonorProfile = (req, res) => {
     console.error("SERVER ERROR:", error);
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -200,7 +217,7 @@ const getEligibilityStatus = (req, res) => {
     const userId = req.user.id;
 
     const sql = `
-      SELECT weight, health_status, last_donation_date, availability_status
+      SELECT age, weight, health_status, last_donation_date, availability_status
       FROM donor_profiles
       WHERE user_id = ?
     `;
@@ -210,7 +227,7 @@ const getEligibilityStatus = (req, res) => {
         console.error("ELIGIBILITY ERROR:", err);
         return res.status(500).json({
           message: "Database error",
-          error: err.message
+          error: err.message,
         });
       }
 
@@ -228,10 +245,7 @@ const getEligibilityStatus = (req, res) => {
         reasons.push("Weight must be at least 50 kg");
       }
 
-      if (
-        profile.health_status &&
-        profile.health_status.toLowerCase() !== "healthy"
-      ) {
+      if (profile.health_status && profile.health_status.toLowerCase() !== "healthy") {
         eligible = false;
         reasons.push("Health status is not eligible");
       }
@@ -258,14 +272,14 @@ const getEligibilityStatus = (req, res) => {
 
       return res.status(200).json({
         eligible,
-        reasons
+        reasons,
       });
     });
   } catch (error) {
     console.error("SERVER ERROR:", error);
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -286,7 +300,7 @@ const getDonorDashboard = (req, res) => {
         console.error("DASHBOARD ERROR:", err);
         return res.status(500).json({
           message: "Database error",
-          error: err.message
+          error: err.message,
         });
       }
 
@@ -304,18 +318,18 @@ const getDonorDashboard = (req, res) => {
         verified: profile.verified,
         total_notifications: 0,
         total_messages: 0,
-        available_requests: 0
+        available_requests: 0,
       };
 
       return res.status(200).json({
-        dashboard: dashboardData
+        dashboard: dashboardData,
       });
     });
   } catch (error) {
     console.error("SERVER ERROR:", error);
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -325,5 +339,5 @@ module.exports = {
   getMyDonorProfile,
   updateMyDonorProfile,
   getEligibilityStatus,
-  getDonorDashboard
+  getDonorDashboard,
 };

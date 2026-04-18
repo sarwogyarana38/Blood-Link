@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-// for Adding Blood Unit
+// for adding blood unit
 const addBloodUnit = (req, res) => {
   try {
     const adminId = req.user.id;
@@ -11,12 +11,12 @@ const addBloodUnit = (req, res) => {
       units_available,
       collection_date,
       expiry_date,
-      status
+      status,
     } = body;
 
     if (!blood_group || !units_available) {
       return res.status(400).json({
-        message: "blood_group and units_available are required"
+        message: "blood_group and units_available are required",
       });
     }
 
@@ -34,31 +34,49 @@ const addBloodUnit = (req, res) => {
         collection_date || null,
         expiry_date || null,
         adminId,
-        status || "available"
+        status || "available",
       ],
       (err, result) => {
         if (err) {
           return res.status(500).json({
             message: "Insert error",
-            error: err.message
+            error: err.message,
           });
         }
 
         return res.status(201).json({
           message: "Blood stock added successfully",
-          inventoryId: result.insertId
+          inventoryId: result.insertId,
         });
       }
     );
   } catch (error) {
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// for Viewing All Blood Stock
+// helper for expiry label
+const getExpiryStatus = (expiryDate) => {
+  if (!expiryDate) return "No Expiry";
+
+  const today = new Date();
+  const exp = new Date(expiryDate);
+
+  today.setHours(0, 0, 0, 0);
+  exp.setHours(0, 0, 0, 0);
+
+  const diffTime = exp - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "Expired";
+  if (diffDays <= 7) return "Expiring Soon";
+  return "Safe";
+};
+
+// for viewing all blood stock
 const getAllBloodStock = (req, res) => {
   try {
     const sql = `
@@ -72,23 +90,28 @@ const getAllBloodStock = (req, res) => {
       if (err) {
         return res.status(500).json({
           message: "Database error",
-          error: err.message
+          error: err.message,
         });
       }
 
+      const stockWithExpiry = result.map((item) => ({
+        ...item,
+        expiry_tracker: getExpiryStatus(item.expiry_date),
+      }));
+
       return res.status(200).json({
-        stock: result
+        stock: stockWithExpiry,
       });
     });
   } catch (error) {
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// for Update Stock
+// for update stock
 const updateBloodStock = (req, res) => {
   try {
     const inventoryId = req.params.id;
@@ -99,7 +122,7 @@ const updateBloodStock = (req, res) => {
       units_available,
       collection_date,
       expiry_date,
-      status
+      status,
     } = body;
 
     const sql = `
@@ -120,36 +143,36 @@ const updateBloodStock = (req, res) => {
         collection_date || null,
         expiry_date || null,
         status || "available",
-        inventoryId
+        inventoryId,
       ],
       (err, result) => {
         if (err) {
           return res.status(500).json({
             message: "Update error",
-            error: err.message
+            error: err.message,
           });
         }
 
         if (result.affectedRows === 0) {
           return res.status(404).json({
-            message: "Inventory record not found"
+            message: "Inventory record not found",
           });
         }
 
         return res.status(200).json({
-          message: "Blood stock updated successfully"
+          message: "Blood stock updated successfully",
         });
       }
     );
   } catch (error) {
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
-// for checking Expiry Tracker
+// for checking expiry tracker
 const getExpiringBloodStock = (req, res) => {
   try {
     const sql = `
@@ -164,18 +187,23 @@ const getExpiringBloodStock = (req, res) => {
       if (err) {
         return res.status(500).json({
           message: "Database error",
-          error: err.message
+          error: err.message,
         });
       }
 
+      const expiringStock = result.map((item) => ({
+        ...item,
+        expiry_tracker: getExpiryStatus(item.expiry_date),
+      }));
+
       return res.status(200).json({
-        expiringStock: result
+        expiringStock,
       });
     });
   } catch (error) {
     return res.status(500).json({
       message: "Server error",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -184,5 +212,5 @@ module.exports = {
   addBloodUnit,
   getAllBloodStock,
   updateBloodStock,
-  getExpiringBloodStock
+  getExpiringBloodStock,
 };

@@ -15,7 +15,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const bloodRoutes = require("./routes/bloodRoutes");
 const requestRoutes = require("./routes/requestRoutes");
 const donorProfileRoutes = require("./routes/donorProfile");
-const donationActivityRoutes = require("./routes/donationActivity");
+
 
 const app = express();
 
@@ -38,6 +38,6 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/blood", bloodRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/donor-profile", donorProfileRoutes);
-app.use("/api/donation-activity", donationActivityRoutes);
+
 
 module.exports = app;
